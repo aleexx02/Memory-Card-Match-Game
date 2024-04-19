@@ -1,1 +1,198 @@
+import pygame
+import random
 
+pygame.init()
+pygame.font.init()
+
+# Set up the screen for the game:
+home_screen_height = 600
+home_screen_width = 600
+home_screen = pygame.display.set_mode((home_screen_height,home_screen_width))
+pygame.display.set_caption("Card Match Game")
+
+menu_options = ["Play Game","Quit"] 
+selected_option = 0  # to keep track of the selected option of the player in the menu screen.
+game_state = "Menu"  # initial game state.
+
+# Set up the grid for the game, where cards will be placed:
+grid_width = 550
+grid_height = 600
+
+# Load the image corresponding to the back of all cards.
+card_back = pygame.image.load("card_back.jpg")
+
+selected_cards = []   # store indexes of selected cards and be able to compare them later.
+matches = 0   # will store the correct matches of the player.
+
+# Colors for the screen and text:
+black = (0,0,0)
+light_pink = (255, 182, 193)
+pink = (255, 20, 150)
+white = (255,255,255)
+
+# Fonts for the text:
+menu_font = pygame.font.SysFont("Elephant", 43)  # define the font size of menu
+game_font = pygame.font.SysFont("Elephant", 35)
+
+
+# Function to display the Game Menu:
+def display_menu(screen,menu_options, selected_option, menu_font,game_font):
+    screen.fill(light_pink)
+    text = menu_font.render("Card Match Game",True, pink)
+    # get_rect creates a rectangle from the surface containing this text:
+    text_rect = text.get_rect(center=(home_screen_width//2, 150))
+    screen.blit(text, text_rect)
+    for i, option in enumerate(menu_options):
+    # this will go through all items in menu_options array and store the index of each one of them in i.
+    # the render() method is used to create a surface object from the text (surface containing that text).
+    # render the text into a surface:
+        text = game_font.render(option,True, black)
+        # get_rect creates a rectangle from the surface containing this text:
+        text_rect = text.get_rect(center=(home_screen_width//2, (i+2.5)*100)) 
+        # each option written in the menu screen will be located at these center coordinates.
+        if i == selected_option:  # the current option selected by the player.
+            pygame.draw.rect(screen, pink, text_rect, 2)  #draw a rectangle surrounding the option selected by the user.
+        screen.blit(text, text_rect)  # this is to copy the contents from the 'text' surface into the menu_screen (screen) surface at the rectangle location('text_rect').
+
+
+# Function to store the card images of the game into a list:
+def cards_game(rows, columns, N) -> list:
+    grid_size = (rows, columns)
+    card_images = []  # to store the cards for the game.
+    # Will start by loading the images of my N different cards.
+    for i in range(N):
+        image = pygame.image.load(f"card_{i}.jpg")  # to go over all images of the cards.
+        # rescale images of cards to fit the screen:
+        image = pygame.transform.scale(image, (grid_width // grid_size[1],grid_height // grid_size[0]))
+        card_images.append(image) 
+    card_images *= 2  # duplicate the list to have 2 of each card.
+    random.shuffle(card_images)  # randomly shuffle the cards in the list.
+    return card_images  # length of card_images is N*2
+
+card_images = cards_game(4,4,8)  # List of card images.
+
+# Function to display the main game:
+def display_game(screen, rows, columns):
+    screen.fill(light_pink)
+    global card_back  # To be able to access the global variable.
+    grid_size = (rows, columns)
+    card_size = grid_width // grid_size[1], grid_height // grid_size[0]  # Size of each card.
+    # Rescale image to fit the screen:
+    card_back = pygame.transform.scale(card_back, (grid_width // grid_size[1],grid_height // grid_size[0]))
+    # Display cards on the grid FACEDOWN:
+    for x in range(columns):  # x: column in the grid.
+        for y in range(rows):  # y: row in the grid.
+            # get_rect creates a rectangle from the surface containing this image (card):
+            card_rect = card_back.get_rect()  # obtain rectangle object with same dimensions as the card image (card_back).
+            # to specify the position of this rectangle, use 'topleft' which specifies the top-left corner position of the card image.
+            card_rect.topleft = (x*card_size[0],y*card_size[1]) 
+            # card_size[0] = width of each card; card_size[1] = height of each card.
+            screen.blit(card_back, card_rect)  # actual drawing (copy) of the card image (card_back) into the game screen (screen), at the rectangle('card_rect') location. 
+    
+
+# Function to obtain position of each card in the grid:
+def obtain_pos(rows, columns, card_images) -> list:    
+# obtain position of cards on the grid; will return a list of rectangles representing the cards.
+    cards =[]  # to store all rectangles that represent cards.
+    grid_size = (rows, columns)
+    card_size = grid_width // grid_size[1], grid_height // grid_size[0]  # size of each card.
+    for x in range(grid_size[1]):  # x: column in the grid.
+        for y in range(grid_size[0]):  # y: row in the grid.
+            index = x + (y * grid_size[1])  # to get the index of each card on the grid.
+            card = card_images[index]  # we get the corresponding card from the card list.
+            # get_rect creates a rectangle from the surface containing this image (card).
+            card_rect = card.get_rect()  # obtain rectangle object with same dimensions as the card image.
+            # to specify the position of this rectangle, use 'topleft' which specifies the top-left corner position of the card image.
+            card_rect.topleft = (x*card_size[0],y*card_size[1])  
+            # card_size[0] = width of each card; card_size[1] = height of each card.
+            cards.append(card_rect)
+    return cards
+
+cards = obtain_pos(4,4,card_images) # List of card rectangles.
+
+# Function to display card (turn over a card selected by the user):
+def display_card(home_screen,index, card_images, cards):  # to flip the card selected by the user.
+            card = card_images[index]
+            card_rect = cards[index]  # get corresponding card's rectangle.
+            home_screen.blit(card, card_rect)  # drawing the card on the position defined by the rectangle 'card_rect'.
+
+
+# MAIN GAME LOOP: run until player decides to quit the game
+running = True
+# 3 main events:
+# KEYDOWN: player presses a key from the keyboard.
+# MOUSEBUTTONDOWN: `player presses a mouse button.`
+# QUIT: exit game screen. 
+card_up = [False] * len(card_images)  # all cards are face down at first.
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False  # exits loop and so, exits game.
+        elif event.type == pygame.KEYDOWN:  # the player presses a key.
+            if event.key == pygame.K_ESCAPE:
+            # the player presses the key 'esc' on the top left corner of the keyboard, it exits the game.
+                running = False
+            if game_state == "Menu":  # we are in the Menu Screen.
+                if event.key == pygame.K_UP:  # pointing up arrow.
+                    selected_option = (selected_option - 1) % len(menu_options)
+                elif event.key == pygame.K_DOWN:
+                    selected_option = (selected_option + 1) % len(menu_options)
+                elif event.key == pygame.K_RETURN:  # press the 'Enter' key.
+                    if selected_option == 0:  # START GAME
+                        game_state = "Play"
+                    elif selected_option == 1:  # QUIT
+                        running = False
+
+        elif event.type == pygame.MOUSEBUTTONDOWN:  # player presses the mouse button.
+            mouse_position = pygame.mouse.get_pos()  # get position of the click of the mouse.
+            if game_state == "Menu":  # MENU SCREEN.
+                for i, option in enumerate(menu_options):  # handle the menu specific input (MOUSE INPUT).
+                    text = menu_font.render(option,True, light_pink)
+                    option_rect = text.get_rect(center=(home_screen_width//2, (i+2.5)*100))
+                    if option == "Play Game" and option_rect.collidepoint(mouse_position):
+                        selected_option = 0
+                        game_state = "Play"
+                    elif option == "Quit" and option_rect.collidepoint(mouse_position):
+                        selected_option = 1
+                        running = False
+            elif game_state == "Play":
+                for i, card_rect in enumerate(cards):
+                    if not card_up[i] and card_rect.collidepoint(mouse_position):
+                    # if card is faced down and the mouse is on that card.
+                        if len(selected_cards) < 2: # only possible to choose 2 cards maximum. 
+                            card_up[i] = True # turn the card face up.
+                            selected_cards.append(i)
+
+
+    # When no event occurs (when open the game):
+    if game_state == "Menu":
+        display_menu(home_screen,menu_options,selected_option, menu_font, game_font)
+
+    elif game_state == "Play":
+        display_game(home_screen, 4, 4)
+        for i, card_rect in enumerate(cards):  # if the card was selected --> need to turn it around.
+            if card_up[i]:  #this means card was selected.
+            # need to turn the card face up.
+                display_card(home_screen,i, card_images,cards)
+        if len(selected_cards) == 2:  # two cards have been selected --> compare them.
+            card1 = card_images[selected_cards[0]]  # store image of first card selected in 'card1'.
+            card2 = card_images[selected_cards[1]]  # store image of second card selected in 'card2'.
+            if card1 == card2:  # CARDS MATCH.
+                matches = matches + 1  # add one match more.
+            else:  # CARDS DON'T MATCH.
+                pygame.display.flip()  # to update the screen.
+                pygame.time.delay(600)  # so the player can see the cards.
+                card_up[selected_cards[0]] = False  # flip the card back.
+                card_up[selected_cards[1]] = False  # flip the card back.
+            selected_cards = []  # reset the selected cards list.
+        if matches == 8:  # when all cards have been matched
+            home_screen.fill(light_pink)
+            message = "You won!!!"
+            text = menu_font.render(message,True, black)
+            # get_rect creates a rectangle from the surface containing this text:
+            text_rect = text.get_rect(center=(home_screen_width//2, home_screen_height//2))
+            home_screen.blit(text, text_rect)  # this is to copy the contents from the 'text' surface into the menu_screen (screen) surface at the rectangle location('text_rect').
+            pygame.display.flip()  # to update the screen.
+
+    pygame.display.flip() # to update the screen.
+pygame.quit() # exit pygame.
