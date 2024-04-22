@@ -10,7 +10,7 @@ home_screen_width = 600
 home_screen = pygame.display.set_mode((home_screen_height,home_screen_width))
 pygame.display.set_caption("Card Match Game")
 
-menu_options = ["Play Game","Quit"] 
+menu_options = ["Play Game","Exit"] 
 selected_option = 0  # to keep track of the selected option of the player in the menu screen.
 game_state = "Menu"  # initial game state.
 
@@ -152,7 +152,7 @@ while running:
                     if option == "Play Game" and option_rect.collidepoint(mouse_position):
                         selected_option = 0
                         game_state = "Play"
-                    elif option == "Quit" and option_rect.collidepoint(mouse_position):
+                    elif option == "Exit" and option_rect.collidepoint(mouse_position):
                         selected_option = 1
                         running = False
             elif game_state == "Play":
